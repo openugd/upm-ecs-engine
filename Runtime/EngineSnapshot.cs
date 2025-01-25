@@ -1,9 +1,7 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
+using Newtonsoft.Json;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Utils;
 
@@ -11,9 +9,6 @@ namespace OpenUGD.ECS.Engine
 {
     public class EngineSnapshot
     {
-        public const string FileExtension = ".snapshot";
-        public const string FileExtensionWithoutDot = "snapshot";
-
         private readonly byte[] _bytes;
 
         public EngineSnapshot(SerializedSnapshot snapshot)
@@ -61,33 +56,17 @@ namespace OpenUGD.ECS.Engine
 
         private byte[] Serialize(SerializedSnapshot snapshot)
         {
-            using (var memoryStream = new MemoryStream())
-            {
-                var formatter = new BinaryFormatter
-                {
-                    AssemblyFormat = FormatterAssemblyStyle.Simple,
-                    TypeFormat = FormatterTypeStyle.TypesWhenNeeded,
-                    Binder = new PreMergeToMergedDeserializationBinder()
-                };
-                formatter.Serialize(memoryStream, snapshot);
-                memoryStream.Position = 0;
-                return memoryStream.ToArray();
-            }
+            var json = JsonConvert.SerializeObject(
+                snapshot
+            );
+            var bytes = Encoding.UTF8.GetBytes(json);
+            return bytes;
         }
 
         private SerializedSnapshot Deserialize(byte[] snapshot)
         {
-            using (var memoryStream = new MemoryStream(snapshot))
-            {
-                var formatter = new BinaryFormatter
-                {
-                    AssemblyFormat = FormatterAssemblyStyle.Simple,
-                    TypeFormat = FormatterTypeStyle.TypesWhenNeeded,
-                    Binder = new PreMergeToMergedDeserializationBinder()
-                };
-                memoryStream.Position = 0;
-                return (SerializedSnapshot)formatter.Deserialize(memoryStream);
-            }
+            var json = Encoding.UTF8.GetString(snapshot);
+            return JsonConvert.DeserializeObject<SerializedSnapshot>(json)!;
         }
 
         [Serializable]
@@ -97,17 +76,6 @@ namespace OpenUGD.ECS.Engine
             public int EngineVersion = ECSEngine.Version;
             public Input[] Inputs;
             public int RandomSeed;
-        }
-
-        private sealed class PreMergeToMergedDeserializationBinder : SerializationBinder
-        {
-            public override Type BindToType(string assemblyName, string typeName)
-            {
-                Type typeToDeserialize = null;
-                var engineAssembly = typeof(EngineSnapshot).Assembly.FullName;
-                typeToDeserialize = Type.GetType($"{typeName}, {engineAssembly}");
-                return typeToDeserialize;
-            }
         }
     }
 }

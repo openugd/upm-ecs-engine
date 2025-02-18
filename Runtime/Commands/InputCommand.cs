@@ -12,8 +12,8 @@ namespace OpenUGD.ECS.Engine.Commands
         where TInput : Input
         where TWorld : World
     {
-        public abstract void ExecuteCommand(TInput input, TWorld world);
+        protected abstract void Execute(TInput input, TWorld world);
 
-        public override void ExecuteCommand(Input input, TWorld world) => ExecuteCommand((TInput)input, world);
+        public override void ExecuteCommand(Input input, TWorld world) => Execute((TInput)input, world);
     }
 }

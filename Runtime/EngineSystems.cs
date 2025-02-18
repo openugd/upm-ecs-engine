@@ -1,20 +1,18 @@
-﻿using OpenUGD.ECS.Engine.Systems;
+﻿using System;
+using OpenUGD.ECS.Engine.Systems;
 
 namespace OpenUGD.ECS.Engine
 {
     public class EngineSystems<TWorld> where TWorld : World
     {
-        private readonly IEngineSystemsProvider<TWorld> _provider;
+        private readonly Func<ISystem<TWorld>[]> _factory;
         private ISystem<TWorld>[]? _systems;
 
-        public EngineSystems(IEngineSystemsProvider<TWorld> provider)
-        {
-            _provider = provider;
-        }
+        public EngineSystems(Func<ISystem<TWorld>[]> factory) => _factory = factory;
 
         public void Initialize(TWorld state, IEngineContext outputs)
         {
-            _systems = _provider.CreateSystems();
+            _systems = _factory();
 
             foreach (var system in _systems)
             {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Outputs;
+using OpenUGD.ECS.Engine.Systems;
 
 namespace OpenUGD.ECS.Engine
 {
@@ -22,10 +23,14 @@ namespace OpenUGD.ECS.Engine
         public abstract void Dispose();
     }
 
-    public abstract class Engine<TWorld> : ECSEngine where TWorld : OpenUGD.ECS.World
+    public abstract class Engine<TWorld> : ECSEngine where TWorld : World
     {
         public abstract EngineOutputs EngineOutputs { get; }
         public abstract TWorld? World { get; }
+
+        protected abstract void OnInitialized();
+        protected abstract TWorld CreateWorld(int seed);
+        protected abstract ISystem<TWorld>[] CreateSystems();
     }
 
     public abstract class Engine<TWorld, TConfiguration> : Engine<TWorld>, IECSEngine, IEngineState
@@ -36,7 +41,6 @@ namespace OpenUGD.ECS.Engine
         private readonly EngineInputs<TWorld> _inputs;
         private readonly EngineOutputs _outputs;
         private readonly EngineSystems<TWorld> _systems;
-        private readonly IECSEngineBuilder<TWorld, TConfiguration> _builder;
         private readonly Context _context;
 
         private int _seed;
@@ -49,51 +53,38 @@ namespace OpenUGD.ECS.Engine
             public int Seed { get; set; }
             public EngineOutputs Outputs;
 
-            public T Enqueue<T>() where T : Output, new()
-            {
-                return Outputs.Enqueue<T>(Tick);
-            }
+            public T Enqueue<T>() where T : Output, new() => Outputs.Enqueue<T>(Tick);
         }
 
-        public Engine(TConfiguration configuration, IECSEngineBuilder<TWorld, TConfiguration> builder)
+        public Engine(TConfiguration configuration, InputCommands<TWorld> inputCommands)
         {
-            Configuration = configuration;
-
-            _builder = builder;
-            _seed = configuration.RandomSeed;
-            _playedInputs = new Queue<Input>();
-            _outputs = new EngineOutputs();
-            _inputs = new EngineInputs<TWorld>(this, builder);
-            _systems = new EngineSystems<TWorld>(builder);
-            _context = new Context {
-                Outputs = _outputs,
-            };
-
-            InitializeState(_seed);
-
             if (configuration.Tick < 0)
             {
                 throw new ArgumentException("tick must be >= 0");
             }
 
-            if (configuration.Inputs != null)
-            {
-                foreach (var action in configuration.Inputs)
-                {
-                    Inputs.AddInput(action);
-                }
-            }
+            Configuration = configuration;
+
+            _seed = configuration.RandomSeed;
+            _playedInputs = new Queue<Input>();
+            _outputs = new EngineOutputs();
+            _inputs = new EngineInputs<TWorld>(this, inputCommands.Build());
+            _systems = new EngineSystems<TWorld>(CreateSystems);
+            _context = new Context {
+                Outputs = _outputs,
+            };
+
+            InitializeState(_seed);
+            InitializeInputs(configuration);
 
             var nextTick = Math.Max(configuration.Tick, 0);
+            _context.Tick = _tick = nextTick;
 
-            _context.Tick = nextTick;
-
-            _systems.Initialize(_world!, _context);
-
-            _builder.OnStart(this, _world!);
+            InitializeSystems();
 
             FastForward(nextTick);
         }
+
 
         public TConfiguration Configuration { get; }
         public int Seed => _seed;
@@ -152,7 +143,7 @@ namespace OpenUGD.ECS.Engine
                         _outputs.Enqueue<StartOverOutput>(tick);
                     }
 
-                    _builder.OnStart(this, _world!);
+                    OnInitialized();
                 }
             }
 
@@ -234,7 +225,7 @@ namespace OpenUGD.ECS.Engine
                 _outputs.Enqueue<StartOverOutput>(0);
             }
 
-            _builder.OnStart(this, _world!);
+            OnInitialized();
 
             var nextTick = Math.Max(Configuration.Tick, 0);
             FastForward(nextTick);
@@ -244,7 +235,6 @@ namespace OpenUGD.ECS.Engine
 
         public void Exit(ExitReason reason) => ExitState = reason;
 
-        public void SetTick(int currentTick) => _tick = currentTick;
 
         public override void Dispose()
         {
@@ -260,8 +250,12 @@ namespace OpenUGD.ECS.Engine
 
                     World.Pool.Return(entities);
                 }
+
+                ((IDisposable)World.Pool).Dispose();
             }
         }
+
+        private void SetTick(int currentTick) => _tick = currentTick;
 
         private void StartOverInternal(int randomSeed)
         {
@@ -294,6 +288,23 @@ namespace OpenUGD.ECS.Engine
             _playedInputs.Clear();
         }
 
+        private void InitializeSystems()
+        {
+            _systems.Initialize(_world!, _context);
+            OnInitialized();
+        }
+
+        private void InitializeInputs(TConfiguration configuration)
+        {
+            if (configuration.Inputs != null)
+            {
+                foreach (var action in configuration.Inputs)
+                {
+                    Inputs.AddInput(action);
+                }
+            }
+        }
+
         private void InitializeState(int randomSeed)
         {
             ExitState = ExitReason.None;
@@ -308,7 +319,7 @@ namespace OpenUGD.ECS.Engine
 
             _seed = seed;
             _context.Seed = seed;
-            _world = _builder.CreateWorld(this, seed);
+            _world = CreateWorld(seed);
         }
     }
 }

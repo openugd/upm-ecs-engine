@@ -15,13 +15,13 @@ namespace OpenUGD.ECS.Engine
     {
         private readonly PriorityQueueComparable<Input> _actionQueue;
         private readonly Engine<TWorld> _engine;
-        private readonly IEngineCommandsProvider<TWorld> _commandsProvider;
+        private readonly IInputCommands<TWorld> _inputCommands;
         private int _idIncrement;
 
-        public EngineInputs(Engine<TWorld> engine, IEngineCommandsProvider<TWorld> commandsProvider)
+        public EngineInputs(Engine<TWorld> engine, IInputCommands<TWorld> inputCommands)
         {
             _engine = engine;
-            _commandsProvider = commandsProvider;
+            _inputCommands = inputCommands;
             _actionQueue = new PriorityQueueComparable<Input>(4096);
         }
 
@@ -69,7 +69,7 @@ namespace OpenUGD.ECS.Engine
 
         public void Execute(Input input)
         {
-            var command = _commandsProvider.GetCommand(input.GetType());
+            var command = _inputCommands.GetCommand(input.GetType());
 
             if (_engine.Environment.IsDebug())
             {

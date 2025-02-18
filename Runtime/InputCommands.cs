@@ -7,12 +7,20 @@ using OpenUGD.ECS.Engine.Inputs;
 
 namespace OpenUGD.ECS.Engine
 {
-    public class InputCommands<TWorld>
+    public interface IAddCommand<TWorld>
+        where TWorld : World
+    {
+        IAddCommand<TWorld> AddCommand<TInput, TCommand>(Func<TCommand> factory)
+            where TInput : Input
+            where TCommand : InputCommand<TWorld>;
+    }
+
+    public class InputCommands<TWorld> : IAddCommand<TWorld>
         where TWorld : World
     {
         private readonly Dictionary<Type, Func<InputCommand<TWorld>>> _commands = new();
 
-        public InputCommands<TWorld> AddCommand<TInput, TCommand>(
+        public IAddCommand<TWorld> AddCommand<TInput, TCommand>(
             Func<TCommand> factory
         )
             where TInput : Input

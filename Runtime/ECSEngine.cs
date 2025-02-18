@@ -56,7 +56,12 @@ namespace OpenUGD.ECS.Engine
             public T Enqueue<T>() where T : Output, new() => Outputs.Enqueue<T>(Tick);
         }
 
-        public Engine(TConfiguration configuration, InputCommands<TWorld> inputCommands)
+        protected Engine(TConfiguration configuration, Action<IAddCommand<TWorld>> options)
+            : this(configuration, CommandOptions(options))
+        {
+        }
+
+        protected Engine(TConfiguration configuration, InputCommands<TWorld> inputCommands)
         {
             if (configuration.Tick < 0)
             {
@@ -238,20 +243,14 @@ namespace OpenUGD.ECS.Engine
 
         public override void Dispose()
         {
-            if (World != null)
+            if (_world != null)
             {
-                for (var i = 0; i < World.SubWorldCount; i++)
+                foreach (var subWorld in _world)
                 {
-                    var entities = World.Pool.PopEntityIds(World.SubWorldUnsafe[i]);
-                    foreach (var entity in entities)
-                    {
-                        World.DeleteEntity(entity);
-                    }
-
-                    World.Pool.Return(entities);
+                    subWorld.DeleteAll();
                 }
 
-                ((IDisposable)World.Pool).Dispose();
+                _world.Pool.Clear();
             }
         }
 
@@ -320,6 +319,13 @@ namespace OpenUGD.ECS.Engine
             _seed = seed;
             _context.Seed = seed;
             _world = CreateWorld(seed);
+        }
+
+        private static InputCommands<TWorld> CommandOptions(Action<IAddCommand<TWorld>> options)
+        {
+            var commands = new InputCommands<TWorld>();
+            options(commands);
+            return commands;
         }
     }
 }

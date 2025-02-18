@@ -3,32 +3,32 @@
     public interface IEngineState
     {
         /// <summary>
-        ///     текущий тик
+        /// current tick
         /// </summary>
         int Tick { get; }
 
         /// <summary>
-        ///     финишировал ли бой
+        /// whether or not the engine finished
         /// </summary>
         bool IsExited { get; }
 
         /// <summary>
-        ///     финиш статус
+        /// finish status
         /// </summary>
         ExitReason ExitState { get; }
 
         /// <summary>
-        ///     окружение
+        /// environment
         /// </summary>
         EngineEnvironment Environment { get; }
 
         /// <summary>
-        ///     продолжить, после финиша
+        /// to continue, after the finish of the engine
         /// </summary>
         void Continue();
 
         /// <summary>
-        ///     завершить работу движка
+        /// shut down the engine
         /// </summary>
         public void Exit(ExitReason reason);
     }

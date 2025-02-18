@@ -28,15 +28,15 @@ namespace OpenUGD.ECS.Engine
         public abstract TWorld? World { get; }
     }
 
-    public class Engine<TWorld, TConfiguration> : Engine<TWorld>, IECSEngine, IEngineState
-        where TWorld : OpenUGD.ECS.World
+    public abstract class Engine<TWorld, TConfiguration> : Engine<TWorld>, IECSEngine, IEngineState
+        where TWorld : World
         where TConfiguration : EngineConfiguration
     {
         private readonly Queue<Input> _playedInputs;
         private readonly EngineInputs<TWorld> _inputs;
         private readonly EngineOutputs _outputs;
         private readonly EngineSystems<TWorld> _systems;
-        private readonly IExternalProvider<TWorld, TConfiguration> _externalProvider;
+        private readonly IECSEngineBuilder<TWorld, TConfiguration> _builder;
         private readonly Context _context;
 
         private int _seed;
@@ -48,24 +48,24 @@ namespace OpenUGD.ECS.Engine
             public int Tick;
             public int Seed { get; set; }
             public EngineOutputs Outputs;
+
             public T Enqueue<T>() where T : Output, new()
             {
                 return Outputs.Enqueue<T>(Tick);
             }
         }
 
-        public Engine(TConfiguration configuration, IExternalProvider<TWorld, TConfiguration> externalProvider)
+        public Engine(TConfiguration configuration, IECSEngineBuilder<TWorld, TConfiguration> builder)
         {
             Configuration = configuration;
 
-            ExternalResolver = _externalProvider = externalProvider;
+            _builder = builder;
             _seed = configuration.RandomSeed;
             _playedInputs = new Queue<Input>();
             _outputs = new EngineOutputs();
-            _inputs = new EngineInputs<TWorld>(this, externalProvider.GetCommandsProvider());
-            _systems = new EngineSystems<TWorld>(externalProvider.GetEngineSystemsProvider());
-            _context = new Context
-            {
+            _inputs = new EngineInputs<TWorld>(this, builder);
+            _systems = new EngineSystems<TWorld>(builder);
+            _context = new Context {
                 Outputs = _outputs,
             };
 
@@ -83,19 +83,18 @@ namespace OpenUGD.ECS.Engine
                     Inputs.AddInput(action);
                 }
             }
-            
+
             var nextTick = Math.Max(configuration.Tick, 0);
-            
+
             _context.Tick = nextTick;
 
             _systems.Initialize(_world!, _context);
 
-            _externalProvider.Start(this, _world!);
+            _builder.OnStart(this, _world!);
 
             FastForward(nextTick);
         }
 
-        public IExternalResolver ExternalResolver { get; }
         public TConfiguration Configuration { get; }
         public int Seed => _seed;
         public sealed override EngineEnvironment Environment => Configuration.Environment;
@@ -153,7 +152,7 @@ namespace OpenUGD.ECS.Engine
                         _outputs.Enqueue<StartOverOutput>(tick);
                     }
 
-                    _externalProvider.Start(this, _world!);
+                    _builder.OnStart(this, _world!);
                 }
             }
 
@@ -235,7 +234,7 @@ namespace OpenUGD.ECS.Engine
                 _outputs.Enqueue<StartOverOutput>(0);
             }
 
-            _externalProvider.Start(this, _world!);
+            _builder.OnStart(this, _world!);
 
             var nextTick = Math.Max(Configuration.Tick, 0);
             FastForward(nextTick);
@@ -269,7 +268,7 @@ namespace OpenUGD.ECS.Engine
             _inputs.Clear();
 
             InitializeState(randomSeed);
-            
+
             _context.Tick = Tick;
             _systems.Initialize(World!, _context);
 
@@ -309,7 +308,7 @@ namespace OpenUGD.ECS.Engine
 
             _seed = seed;
             _context.Seed = seed;
-            _world = _externalProvider.CreateWorld(this, seed);
+            _world = _builder.CreateWorld(this, seed);
         }
     }
 }

@@ -1,9 +1,8 @@
-﻿using OpenUGD.ECS.Engine.Providers;
-using OpenUGD.ECS.Engine.Systems;
+﻿using OpenUGD.ECS.Engine.Systems;
 
 namespace OpenUGD.ECS.Engine
 {
-    public class EngineSystems<TWorld> where TWorld : OpenUGD.ECS.World
+    public class EngineSystems<TWorld> where TWorld : World
     {
         private readonly IEngineSystemsProvider<TWorld> _provider;
         private ISystem<TWorld>[]? _systems;

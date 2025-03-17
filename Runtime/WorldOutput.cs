@@ -14,6 +14,6 @@ namespace OpenUGD.ECS.Engine
 
         public bool IsGenerate { get; }
 
-        public T Enqueue<T>() where T : Output, new() => _engine.EngineOutputs.Enqueue<T>(_engine.Tick);
+        public T Enqueue<T>() where T : Output, new() => _engine.Outputs.Enqueue<T>(_engine.Tick);
     }
 }

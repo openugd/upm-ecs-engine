@@ -11,6 +11,9 @@ namespace OpenUGD.ECS.Engine
         int Count { get; }
         Output Dequeue();
         void ReleaseToPool(Output evt);
+        
+        void Enqueue(Output output);
+        T Enqueue<T>(int tick) where T : Output, new();
     }
 
     public class EngineOutputs : IEngineOutputs
@@ -26,7 +29,7 @@ namespace OpenUGD.ECS.Engine
         {
             if (_queue.Count == 0)
             {
-                throw new InvalidOperationException($"{MethodBase.GetCurrentMethod()!.Name}: очередь пуста");
+                throw new InvalidOperationException($"{nameof(Dequeue)}: queue is empty");
             }
 
             return _queue.Dequeue();
@@ -42,16 +45,10 @@ namespace OpenUGD.ECS.Engine
 
             if (!_debugInPool.Add(evt))
             {
-                throw new ArgumentException("данный ивент уже находится в пуле");
+                throw new ArgumentException("this event is already in the pool");
             }
 
             stack.Push(evt);
-        }
-
-        public void Enqueue(Output output)
-        {
-            _debugInPool.Remove(output);
-            _queue.Enqueue(output);
         }
 
         public void ReturnToPoolAll()
@@ -60,6 +57,12 @@ namespace OpenUGD.ECS.Engine
             {
                 ReleaseToPool(_queue.Dequeue());
             }
+        }
+
+        public void Enqueue(Output output)
+        {
+            _debugInPool.Remove(output);
+            _queue.Enqueue(output);
         }
 
         public T Enqueue<T>(int tick) where T : Output, new()

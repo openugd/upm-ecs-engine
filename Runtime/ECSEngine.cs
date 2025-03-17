@@ -27,7 +27,6 @@ namespace OpenUGD.ECS.Engine
 
     public abstract class Engine<TWorld> : ECSEngine where TWorld : World
     {
-        public abstract EngineOutputs EngineOutputs { get; }
         public abstract TWorld? World { get; }
 
         protected abstract void OnInitialized();
@@ -85,7 +84,7 @@ namespace OpenUGD.ECS.Engine
             _seed = configuration.RandomSeed;
             _playedInputs = new Queue<Input>();
             _outputs = new EngineOutputs();
-            _inputs = new EngineInputs<TWorld>(this, inputCommands.Build());
+            _inputs = new EngineInputs<TWorld>(this, inputCommands.Build(), Serializer);
             _systems = new EngineSystems<TWorld>(CreateSystems);
             _context = new Context
             {
@@ -114,7 +113,6 @@ namespace OpenUGD.ECS.Engine
         public bool IsExited => ExitState != ExitReason.None;
         public ExitReason ExitState { get; private set; }
         public sealed override TWorld? World => _world;
-        public sealed override EngineOutputs EngineOutputs => _outputs;
 
         public override EngineSnapshot Snapshot()
         {

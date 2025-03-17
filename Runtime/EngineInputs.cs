@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Utils;
@@ -9,6 +10,7 @@ namespace OpenUGD.ECS.Engine
     {
         int Count { get; }
         void AddInput(Input input);
+        Input[] Copy();
     }
 
     public class EngineInputs<TWorld> : IEngineInputs where TWorld : OpenUGD.ECS.World
@@ -16,12 +18,14 @@ namespace OpenUGD.ECS.Engine
         private readonly PriorityQueueComparable<Input> _actionQueue;
         private readonly Engine<TWorld> _engine;
         private readonly IInputCommands<TWorld> _inputCommands;
+        private readonly Serializer _serializer;
         private int _idIncrement;
 
-        public EngineInputs(Engine<TWorld> engine, IInputCommands<TWorld> inputCommands)
+        public EngineInputs(Engine<TWorld> engine, IInputCommands<TWorld> inputCommands, Serializer serializer)
         {
             _engine = engine;
             _inputCommands = inputCommands;
+            _serializer = serializer;
             _actionQueue = new PriorityQueueComparable<Input>(4096);
         }
 
@@ -31,11 +35,16 @@ namespace OpenUGD.ECS.Engine
         {
             if (input.Tick <= _engine.Tick)
                 throw new ArgumentException(string.Format(
-                    "{2} новое действие не можеть быть меньше или равно чем уже пройденый тик игры. Тик действия:{0}. Тик игры:{1}, тип:{3}",
+                    "{2} a new action cannot be less than or equal to an already completed game tick. Action tick:{0}. Game Tick:{1}, Type:{3}",
                     input.Tick, _engine.Tick, MethodBase.GetCurrentMethod()!.Name, input.GetType().FullName));
 
             Input.Internal.SetId(input, ++_idIncrement);
             Enqueue(input);
+        }
+
+        public Input[] Copy()
+        {
+            return _serializer.Clone(_actionQueue.ToArray());
         }
 
         public Input Peek()
@@ -76,7 +85,7 @@ namespace OpenUGD.ECS.Engine
                 if (command == null)
                 {
                     throw new InvalidOperationException(string.Format(
-                        MethodBase.GetCurrentMethod()!.Name + ": комманда не найдена: {0}", input.GetType()));
+                        MethodBase.GetCurrentMethod()!.Name + ": command not found: {0}", input.GetType()));
                 }
             }
 

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Outputs;
 using OpenUGD.ECS.Engine.Systems;
+using OpenUGD.ECS.Engine.Utils;
 
 namespace OpenUGD.ECS.Engine
 {
@@ -56,17 +58,27 @@ namespace OpenUGD.ECS.Engine
             public T Enqueue<T>() where T : Output, new() => Outputs.Enqueue<T>(Tick);
         }
 
-        protected Engine(TConfiguration configuration, Action<IAddCommand<TWorld>> options)
-            : this(configuration, CommandOptions(options))
+        protected Engine(
+            TConfiguration configuration,
+            Action<IAddCommand<TWorld>> options,
+            Action<JsonSerializerSettings> settings = null
+        )
+            : this(configuration, CommandOptions(options), settings)
         {
         }
 
-        protected Engine(TConfiguration configuration, InputCommands<TWorld> inputCommands)
+        protected Engine(
+            TConfiguration configuration,
+            InputCommands<TWorld> inputCommands,
+            Action<JsonSerializerSettings> settings = null
+        )
         {
             if (configuration.Tick < 0)
             {
                 throw new ArgumentException("tick must be >= 0");
             }
+
+            Serializer = new Serializer(settings);
 
             Configuration = configuration;
 
@@ -75,7 +87,8 @@ namespace OpenUGD.ECS.Engine
             _outputs = new EngineOutputs();
             _inputs = new EngineInputs<TWorld>(this, inputCommands.Build());
             _systems = new EngineSystems<TWorld>(CreateSystems);
-            _context = new Context {
+            _context = new Context
+            {
                 Outputs = _outputs,
             };
 
@@ -90,7 +103,7 @@ namespace OpenUGD.ECS.Engine
             FastForward(nextTick);
         }
 
-
+        public Serializer Serializer { get; }
         public TConfiguration Configuration { get; }
         public int Seed => _seed;
         public sealed override EngineEnvironment Environment => Configuration.Environment;
@@ -105,7 +118,7 @@ namespace OpenUGD.ECS.Engine
 
         public override EngineSnapshot Snapshot()
         {
-            var snapshot = new EngineSnapshot(Configuration, _playedInputs.ToArray(), _seed);
+            var snapshot = new EngineSnapshot(Configuration, _playedInputs.ToArray(), _seed, Serializer);
             return snapshot;
         }
 

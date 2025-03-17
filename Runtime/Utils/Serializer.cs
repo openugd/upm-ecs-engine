@@ -6,10 +6,12 @@ using OpenUGD.ECS.Engine.Utils.Converters;
 
 namespace OpenUGD.ECS.Engine.Utils
 {
-    public static class Serializer
+    public class Serializer
     {
-        private static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
+        public readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {
+            Formatting = Formatting.None,
+            TypeNameHandling = TypeNameHandling.None,
             Converters = new List<JsonConverter>
             {
                 new EnumIntegerConverter(),
@@ -17,23 +19,37 @@ namespace OpenUGD.ECS.Engine.Utils
             }
         };
 
-        public static byte[] Serialize(object value)
+        public Serializer(Action<JsonSerializerSettings> settings = null)
         {
-            var json = JsonConvert.SerializeObject(value, Formatting.Indented, SerializerSettings);
+            if (settings != null)
+            {
+                settings(Settings);
+            }
+        }
+
+        public T Clone<T>(T obj)
+        {
+            var serialized = Serialize(obj);
+            return Deserialize<T>(serialized);
+        }
+
+        public byte[] Serialize(object value)
+        {
+            var json = JsonConvert.SerializeObject(value, Settings);
             var bytes = Encoding.UTF8.GetBytes(json);
             return bytes;
         }
 
-        public static object Deserialize(Type type, byte[] bytes)
+        public object Deserialize(Type type, byte[] bytes)
         {
             var json = Encoding.UTF8.GetString(bytes);
-            return JsonConvert.DeserializeObject(json, type, SerializerSettings);
+            return JsonConvert.DeserializeObject(json, type, Settings);
         }
 
-        public static T Deserialize<T>(byte[] bytes)
+        public T Deserialize<T>(byte[] bytes)
         {
             var json = Encoding.UTF8.GetString(bytes);
-            return JsonConvert.DeserializeObject<T>(json, SerializerSettings);
+            return JsonConvert.DeserializeObject<T>(json, Settings);
         }
     }
 }

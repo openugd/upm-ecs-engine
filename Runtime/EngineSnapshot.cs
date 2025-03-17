@@ -9,30 +9,34 @@ namespace OpenUGD.ECS.Engine
 {
     public class EngineSnapshot
     {
+        private readonly Serializer _serializer;
         private readonly byte[] _bytes;
 
-        public EngineSnapshot(SerializedSnapshot snapshot)
+        public EngineSnapshot(SerializedSnapshot snapshot, Serializer serializer)
         {
-            _bytes = Serialize(snapshot);
+            _serializer = serializer;
+            _bytes = serializer.Serialize(snapshot);
             Snapshot = snapshot;
         }
 
-        public EngineSnapshot(byte[] bytes)
+        public EngineSnapshot(byte[] bytes, Serializer serializer)
         {
             _bytes = bytes;
-            Snapshot = Deserialize(bytes);
+            _serializer = serializer;
+            Snapshot = serializer.Deserialize<SerializedSnapshot>(bytes);
         }
 
-        public EngineSnapshot(EngineConfiguration configuration, Input[] inputs, int randomSeed)
+        public EngineSnapshot(EngineConfiguration configuration, Input[] inputs, int randomSeed, Serializer serializer)
         {
+            _serializer = serializer;
             Snapshot = new SerializedSnapshot
             {
-                Configuration = DeepClone.Clone(configuration),
+                Configuration = serializer.Clone(configuration),
                 RandomSeed = randomSeed,
-                Inputs = DeepClone.Clone(inputs.Where(i => i.GetType().IsDefined(typeof(SerializableAttribute), true))
+                Inputs = serializer.Clone(inputs.Where(i => i.GetType().IsDefined(typeof(SerializableAttribute), true))
                     .ToArray())
             };
-            _bytes = Serialize(Snapshot);
+            _bytes = serializer.Serialize(Snapshot);
         }
 
         public SerializedSnapshot Snapshot { get; }
@@ -44,7 +48,7 @@ namespace OpenUGD.ECS.Engine
 
         public EngineConfiguration Build()
         {
-            var snapshot = Deserialize(_bytes);
+            var snapshot = _serializer.Deserialize<SerializedSnapshot>(_bytes);
 
             var config = snapshot.Configuration;
             config.Environment |= EngineEnvironment.Snapshot;
@@ -52,21 +56,6 @@ namespace OpenUGD.ECS.Engine
             config.Inputs = snapshot.Inputs;
 
             return config;
-        }
-
-        private byte[] Serialize(SerializedSnapshot snapshot)
-        {
-            var json = JsonConvert.SerializeObject(
-                snapshot
-            );
-            var bytes = Encoding.UTF8.GetBytes(json);
-            return bytes;
-        }
-
-        private SerializedSnapshot Deserialize(byte[] snapshot)
-        {
-            var json = Encoding.UTF8.GetString(snapshot);
-            return JsonConvert.DeserializeObject<SerializedSnapshot>(json)!;
         }
 
         [Serializable]

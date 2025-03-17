@@ -1,6 +1,5 @@
 ﻿using System;
 using OpenUGD.ECS.Engine.Inputs;
-using OpenUGD.ECS.Engine.Utils;
 
 namespace OpenUGD.ECS.Engine
 {
@@ -8,37 +7,28 @@ namespace OpenUGD.ECS.Engine
     public class EngineConfiguration
     {
         /// <summary>
-        ///     окружение
+        ///     environment
         /// </summary>
         public EngineEnvironment Environment;
 
         /// <summary>
-        ///     список вводных действий
+        ///     list of inputs
         /// </summary>
         public Input[]? Inputs;
 
         /// <summary>
-        ///     максимальное к-во тиков
+        ///     maximum number of ticks
         /// </summary>
         public int MaxTicks;
 
         /// <summary>
-        ///     рандом
+        ///     random
         /// </summary>
         public int RandomSeed;
 
         /// <summary>
-        ///     текущий тик
+        ///     current tick
         /// </summary>
         public int Tick;
-
-        /// <summary>
-        ///     клонирование
-        /// </summary>
-        /// <returns></returns>
-        public EngineConfiguration Clone()
-        {
-            return DeepClone.Clone(this);
-        }
     }
 }

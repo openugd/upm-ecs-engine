@@ -14,7 +14,11 @@ namespace OpenUGD.ECS.Engine.Utils.Converters
             {
                 foreach (var input in value)
                 {
-                    writer.WriteValue(input.GetType().AssemblyQualifiedName);
+                    var assembly = input.GetType().Assembly;
+                    var fullName = input.GetType().FullName;
+                    var type = $"{fullName}, {assembly.GetName().Name}";
+                    
+                    writer.WriteValue(type);
                     serializer.Serialize(writer, input, input.GetType());
                 }
             }

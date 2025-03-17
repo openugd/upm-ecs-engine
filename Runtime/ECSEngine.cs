@@ -118,7 +118,13 @@ namespace OpenUGD.ECS.Engine
 
         public override EngineSnapshot Snapshot()
         {
-            var snapshot = new EngineSnapshot(Configuration, _playedInputs.ToArray(), _seed, Serializer);
+            var snapshot = new EngineSnapshot(
+                configuration: Configuration,
+                inputs: _playedInputs.ToArray(),
+                randomSeed: _seed,
+                tick: Tick,
+                serializer: Serializer
+            );
             return snapshot;
         }
 

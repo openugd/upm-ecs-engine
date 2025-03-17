@@ -11,12 +11,7 @@ namespace OpenUGD.ECS.Engine.Utils
         public readonly JsonSerializerSettings Settings = new JsonSerializerSettings
         {
             Formatting = Formatting.None,
-            TypeNameHandling = TypeNameHandling.None,
-            Converters = new List<JsonConverter>
-            {
-                new EnumIntegerConverter(),
-                new InputConverter()
-            }
+            TypeNameHandling = TypeNameHandling.All
         };
 
         public Serializer(Action<JsonSerializerSettings> settings = null)

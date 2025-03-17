@@ -26,15 +26,25 @@ namespace OpenUGD.ECS.Engine
             Snapshot = serializer.Deserialize<SerializedSnapshot>(bytes);
         }
 
-        public EngineSnapshot(EngineConfiguration configuration, Input[] inputs, int randomSeed, Serializer serializer)
+        public EngineSnapshot(
+            EngineConfiguration configuration,
+            Input[] inputs,
+            int randomSeed,
+            int tick,
+            Serializer serializer
+        )
         {
             _serializer = serializer;
             Snapshot = new SerializedSnapshot
             {
                 Configuration = serializer.Clone(configuration),
+                Tick = tick,
                 RandomSeed = randomSeed,
-                Inputs = serializer.Clone(inputs.Where(i => i.GetType().IsDefined(typeof(SerializableAttribute), true))
-                    .ToArray())
+                Inputs = serializer
+                    .Clone(inputs
+                        .Where(i => i.GetType().IsDefined(typeof(SerializableAttribute), true))
+                        .ToArray()
+                    )
             };
             _bytes = serializer.Serialize(Snapshot);
         }
@@ -54,6 +64,7 @@ namespace OpenUGD.ECS.Engine
             config.Environment |= EngineEnvironment.Snapshot;
             config.RandomSeed = snapshot.RandomSeed;
             config.Inputs = snapshot.Inputs;
+            config.Tick = snapshot.Tick;
 
             return config;
         }
@@ -65,6 +76,7 @@ namespace OpenUGD.ECS.Engine
             public int EngineVersion = ECSEngine.Version;
             public Input[] Inputs;
             public int RandomSeed;
+            public int Tick;
         }
     }
 }

@@ -1,19 +1,19 @@
 ﻿using System;
-using System.Linq;
-using System.Reflection;
+using System.Collections;
+using System.Collections.Generic;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Utils;
 
 namespace OpenUGD.ECS.Engine
 {
-    public interface IEngineInputs
+    public interface IEngineInputs : IEnumerable<Input>
     {
         int Count { get; }
         void AddInput(Input input);
-        Input[] Copy();
+        new List<Input>.Enumerator GetEnumerator();
     }
 
-    public class EngineInputs<TWorld> : IEngineInputs where TWorld : OpenUGD.ECS.World
+    public class EngineInputs<TWorld> : IEngineInputs where TWorld : World
     {
         private readonly PriorityQueueComparable<Input> _actionQueue;
         private readonly Engine<TWorld> _engine;
@@ -34,36 +34,33 @@ namespace OpenUGD.ECS.Engine
         public void AddInput(Input input)
         {
             if (input.Tick <= _engine.Tick)
-                throw new ArgumentException(string.Format(
-                    "{2} a new action cannot be less than or equal to an already completed game tick. Action tick:{0}. Game Tick:{1}, Type:{3}",
-                    input.Tick, _engine.Tick, MethodBase.GetCurrentMethod()!.Name, input.GetType().FullName));
+            {
+                throw new ArgumentException(
+                    $"{nameof(AddInput)} a new action cannot be less than or equal to an already completed game tick. Action tick:{input.Tick}. Game Tick:{_engine.Tick}, Type:{input.GetType().FullName}"
+                );
+            }
 
             Input.Internal.SetId(input, ++_idIncrement);
             Enqueue(input);
         }
 
-        public Input[] Copy()
+        public int CopyTo(List<Input> toList)
         {
-            return _serializer.Clone(_actionQueue.ToArray());
+            toList.AddRange(_actionQueue.Source);
+            return _actionQueue.Count;
+        }
+
+        public void CloneTo(List<Input> toList)
+        {
+            foreach (var input in _actionQueue)
+            {
+                toList.Add(_serializer.Clone(input));
+            }
         }
 
         public Input Peek()
         {
             return _actionQueue.Peek();
-        }
-
-        public bool Contains<T>(int tick) where T : Input
-        {
-            return Contains(typeof(T), tick);
-        }
-
-        public bool Contains(Type type, int tick)
-        {
-            foreach (var input in _actionQueue)
-                if (input.Tick == tick && input.GetType() == type)
-                    return true;
-
-            return false;
         }
 
         public Input Dequeue()
@@ -84,8 +81,8 @@ namespace OpenUGD.ECS.Engine
             {
                 if (command == null)
                 {
-                    throw new InvalidOperationException(string.Format(
-                        MethodBase.GetCurrentMethod()!.Name + ": command not found: {0}", input.GetType()));
+                    throw new InvalidOperationException(
+                        $"{nameof(Execute)}, for an input {input.GetType()} cannot find command");
                 }
             }
 
@@ -99,6 +96,60 @@ namespace OpenUGD.ECS.Engine
         {
             _actionQueue.Clear();
             _idIncrement = 0;
+        }
+
+        public List<Input>.Enumerator GetEnumerator() => _actionQueue.GetEnumerator();
+
+        List<Input>.Enumerator IEngineInputs.GetEnumerator() => GetEnumerator();
+
+        IEnumerator<Input> IEnumerable<Input>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+
+    public static class EngineInputsExtensions
+    {
+        public static bool Contains(this IEngineInputs inputs, Type type, int tick)
+        {
+            foreach (var input in inputs)
+            {
+                if (input.Tick == tick && input.GetType() == type)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool Contains(this IEngineInputs inputs, Type type)
+        {
+            foreach (var input in inputs)
+            {
+                if (input.GetType() == type)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool Contains<T>(this IEngineInputs inputs, int tick) where T : Input
+        {
+            return inputs.Contains(typeof(T), tick);
+        }
+
+        public static bool Contains<T>(this IEngineInputs inputs) where T : Input
+        {
+            return inputs.Contains(typeof(T));
+        }
+
+        public static int CopyTo(this IEngineInputs inputs, List<Input> toList)
+        {
+            toList.AddRange(inputs);
+            return inputs.Count;
         }
     }
 }

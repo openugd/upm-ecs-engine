@@ -15,7 +15,7 @@ namespace OpenUGD.ECS.Engine.Inputs
         public int CompareTo(object? obj)
         {
             var other = obj as Input;
-            if (other == null) throw new ArgumentException($"обьект не является производным от: {typeof(Input)}");
+            if (other == null) throw new ArgumentException($"object is not derived from: {typeof(Input)}");
             return Comparer.Compare(this, other);
         }
 

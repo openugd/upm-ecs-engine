@@ -13,14 +13,14 @@ namespace OpenUGD.ECS.Engine.Utils
             _data = new List<T>(capacity);
         }
 
+        public List<T> Source => _data;
+
         public int Count => _data.Count;
 
         public List<T>.Enumerator GetEnumerator() => _data.GetEnumerator();
-
-        // ReSharper disable once HeapView.BoxingAllocation
+        
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => _data.GetEnumerator();
-
-        // ReSharper disable once HeapView.BoxingAllocation
+        
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public void Enqueue(T item)

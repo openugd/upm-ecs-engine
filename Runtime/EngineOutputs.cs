@@ -11,16 +11,24 @@ namespace OpenUGD.ECS.Engine
         int Count { get; }
         Output Dequeue();
         void ReleaseToPool(Output evt);
-        
+
         void Enqueue(Output output);
         T Enqueue<T>(int tick) where T : Output, new();
     }
 
     public class EngineOutputs : IEngineOutputs
     {
-        private readonly HashSet<Output> _debugInPool = new HashSet<Output>();
+        private readonly HashSet<Output> _debugInPool;
         private readonly Dictionary<Type, Stack<Output>> _pool = new Dictionary<Type, Stack<Output>>();
         private readonly Queue<Output> _queue = new Queue<Output>();
+
+        public EngineOutputs(bool isDebug)
+        {
+            if (isDebug)
+            {
+                _debugInPool = new HashSet<Output>();
+            }
+        }
 
         public bool IsEmpty => _queue.Count == 0;
         public int Count => _queue.Count;
@@ -43,11 +51,14 @@ namespace OpenUGD.ECS.Engine
                 _pool[evt.GetType()] = stack = new Stack<Output>();
             }
 
-            if (!_debugInPool.Add(evt))
+            if (_debugInPool != null)
             {
-                throw new ArgumentException("this event is already in the pool");
+                if (!_debugInPool.Add(evt))
+                {
+                    throw new ArgumentException("this event is already in the pool");
+                }
             }
-
+            
             stack.Push(evt);
         }
 
@@ -61,7 +72,11 @@ namespace OpenUGD.ECS.Engine
 
         public void Enqueue(Output output)
         {
-            _debugInPool.Remove(output);
+            if (_debugInPool != null)
+            {
+                _debugInPool.Remove(output);
+            }
+
             _queue.Enqueue(output);
         }
 

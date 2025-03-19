@@ -1,7 +1,7 @@
 {
   "name": "com.openugd.ecs.engine",
   "displayName": "ECS Engine",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "unity": "2020.3",
   "author": "https://github.com/openugd",
   "description": "ECS Engine",
@@ -10,7 +10,7 @@
     "engine"
   ],
   "dependencies": {
-    "com.openugd.ecs": "0.4.0"
+    "com.openugd.ecs": "0.5.0"
   },
   "samples": [
   ],

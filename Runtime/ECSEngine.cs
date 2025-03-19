@@ -83,7 +83,7 @@ namespace OpenUGD.ECS.Engine
 
             _seed = configuration.RandomSeed;
             _playedInputs = new Queue<Input>();
-            _outputs = new EngineOutputs();
+            _outputs = new EngineOutputs(configuration.Environment.IsDebug());
             _inputs = new EngineInputs<TWorld>(this, inputCommands.Build(), Serializer);
             _systems = new EngineSystems<TWorld>(CreateSystems);
             _context = new Context

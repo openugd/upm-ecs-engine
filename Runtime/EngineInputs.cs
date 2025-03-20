@@ -6,19 +6,43 @@ using OpenUGD.ECS.Engine.Utils;
 
 namespace OpenUGD.ECS.Engine
 {
+    public interface IEngineExecutedInputs : IEnumerable<Input>
+    {
+        int Count { get; }
+        new Queue<Input>.Enumerator GetEnumerator();
+    }
+
     public interface IEngineInputs : IEnumerable<Input>
     {
         int Count { get; }
         void AddInput(Input input);
         new List<Input>.Enumerator GetEnumerator();
+        IEngineExecutedInputs Executed { get; }
     }
 
     public class EngineInputs<TWorld> : IEngineInputs where TWorld : World
     {
+        class EngineExecutedInputs : IEngineExecutedInputs
+        {
+            private readonly Queue<Input> _executedInputs;
+
+            public EngineExecutedInputs(Queue<Input> executedInputs) => _executedInputs = executedInputs;
+
+            public int Count => _executedInputs.Count;
+
+            public Queue<Input>.Enumerator GetEnumerator() => _executedInputs.GetEnumerator();
+
+            IEnumerator<Input> IEnumerable<Input>.GetEnumerator() => _executedInputs.GetEnumerator();
+
+            IEnumerator IEnumerable.GetEnumerator() => _executedInputs.GetEnumerator();
+        }
+
+        private readonly Queue<Input> _executedInputs;
         private readonly PriorityQueueComparable<Input> _actionQueue;
         private readonly Engine<TWorld> _engine;
         private readonly IInputCommands<TWorld> _inputCommands;
         private readonly Serializer _serializer;
+        private readonly EngineExecutedInputs _engineExecuted;
         private int _idIncrement;
 
         public EngineInputs(Engine<TWorld> engine, IInputCommands<TWorld> inputCommands, Serializer serializer)
@@ -26,10 +50,14 @@ namespace OpenUGD.ECS.Engine
             _engine = engine;
             _inputCommands = inputCommands;
             _serializer = serializer;
+            _executedInputs = new Queue<Input>(4096);
             _actionQueue = new PriorityQueueComparable<Input>(4096);
+            _engineExecuted = new EngineExecutedInputs(_executedInputs);
         }
 
         public int Count => _actionQueue.Count;
+
+        public IEngineExecutedInputs Executed => _engineExecuted;
 
         public void AddInput(Input input)
         {
@@ -43,6 +71,14 @@ namespace OpenUGD.ECS.Engine
             Input.Internal.SetId(input, ++_idIncrement);
             Enqueue(input);
         }
+
+        public void ClearExecuted() => _executedInputs.Clear();
+
+        public Input Peek() => _actionQueue.Peek();
+
+        public Input Dequeue() => _actionQueue.Dequeue();
+
+        public void Enqueue(Input input) => _actionQueue.Enqueue(input);
 
         public int CopyTo(List<Input> toList)
         {
@@ -58,23 +94,10 @@ namespace OpenUGD.ECS.Engine
             }
         }
 
-        public Input Peek()
-        {
-            return _actionQueue.Peek();
-        }
-
-        public Input Dequeue()
-        {
-            return _actionQueue.Dequeue();
-        }
-
-        public void Enqueue(Input input)
-        {
-            _actionQueue.Enqueue(input);
-        }
-
         public void Execute(Input input)
         {
+            _executedInputs.Enqueue(input);
+
             var command = _inputCommands.GetCommand(input.GetType());
 
             if (_engine.Environment.IsDebug())

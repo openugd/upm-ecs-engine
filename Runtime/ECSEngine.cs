@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using OpenUGD.ECS.Engine.Inputs;
 using OpenUGD.ECS.Engine.Outputs;
@@ -38,7 +38,6 @@ namespace OpenUGD.ECS.Engine
         where TWorld : World
         where TConfiguration : EngineConfiguration
     {
-        private readonly Queue<Input> _playedInputs;
         private readonly EngineInputs<TWorld> _inputs;
         private readonly EngineOutputs _outputs;
         private readonly EngineSystems<TWorld> _systems;
@@ -82,7 +81,6 @@ namespace OpenUGD.ECS.Engine
             Configuration = configuration;
 
             _seed = configuration.RandomSeed;
-            _playedInputs = new Queue<Input>();
             _outputs = new EngineOutputs(configuration.Environment.IsDebug());
             _inputs = new EngineInputs<TWorld>(this, inputCommands.Build(), Serializer);
             _systems = new EngineSystems<TWorld>(CreateSystems);
@@ -118,7 +116,7 @@ namespace OpenUGD.ECS.Engine
         {
             var snapshot = new EngineSnapshot(
                 configuration: Configuration,
-                inputs: _playedInputs.ToArray(),
+                inputs: _inputs.Executed.ToArray(),
                 randomSeed: _seed,
                 tick: Tick,
                 serializer: Serializer
@@ -194,7 +192,7 @@ namespace OpenUGD.ECS.Engine
                 Input input;
                 while (!IsExited && _inputs.Count != 0 && (input = _inputs.Peek()).Tick <= currentTick)
                 {
-                    _playedInputs.Enqueue(_inputs.Dequeue());
+                    _inputs.Dequeue();
                     _inputs.Execute(input);
                 }
 
@@ -284,7 +282,7 @@ namespace OpenUGD.ECS.Engine
 
             if (!Environment.IsSnapshot())
             {
-                foreach (var action in _playedInputs)
+                foreach (var action in _inputs.Executed)
                 {
                     _inputs.Enqueue(action);
                 }
@@ -301,7 +299,7 @@ namespace OpenUGD.ECS.Engine
                 }
             }
 
-            _playedInputs.Clear();
+            _inputs.ClearExecuted();
         }
 
         private void InitializeSystems()
